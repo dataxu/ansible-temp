@@ -3,6 +3,8 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+from tagging.validate import tag_validator
+
 __metaclass__ = type
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -595,6 +597,16 @@ def main():
         stack_params['RoleARN'] = module.params['role_arn']
 
     result = {}
+
+    # validate tags
+    if module.params.get('tags'):
+        team_tag = module.params['tags']['Team']
+        project_tag = module.params['tags']['Project']
+        validation_res = tag_validator.validate(team_tag, project_tag)
+        if not validation_res:
+            module.fail_json(msg="Invalid Tag: tag validation failed.")
+    else:
+        module.fail_json(msg="Invalid Tag: global tags are not present.")
 
     try:
         region, ec2_url, aws_connect_kwargs = ansible.module_utils.ec2.get_aws_connection_info(module, boto3=True)
