@@ -602,11 +602,11 @@ def main():
     if module.params.get('tags'):
         team_tag = module.params['tags']['Team']
         project_tag = module.params['tags']['Project']
-        validation_res = tag_validator.validate(team_tag, project_tag)
+        validation_res, validation_msg = tag_validator.validate(team_tag, project_tag)
         if not validation_res:
-            module.fail_json(msg="Invalid Tag: tag validation failed.")
+            module.fail_json(msg=validation_msg)
     else:
-        module.fail_json(msg="Invalid Tag: global tags are not present.")
+        module.fail_json(msg="Tag validation error! Tags are not defined.")
 
     try:
         region, ec2_url, aws_connect_kwargs = ansible.module_utils.ec2.get_aws_connection_info(module, boto3=True)
