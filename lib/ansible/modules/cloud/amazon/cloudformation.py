@@ -3,6 +3,8 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+from aws_tagging.validate import tag_validator
+
 __metaclass__ = type
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -531,6 +533,24 @@ def get_stack_facts(cfn, stack_name):
 
     return stack_info
 
+def tag_validation(tags, module):
+    tags_flag  = False
+    tags_msg = ""
+    if not 'Team' in tags.keys():
+        tags_flag = True
+        tags_msg += "Team tag "
+    if not 'Project' in tags.keys():
+        if tags_flag:
+            tags_msg += "and Project tag "
+        else:
+            tags_flag = True
+            tags_msg += "Project tag "
+    if tags_flag:
+        module.fail_json(msg= "Invalid Tag: " + tags_msg + " not present.")
+
+    validation_res, validation_msg = tag_validator.validate(tags['Team'], tags['Project'])
+    if not validation_res:
+        module.fail_json(msg=validation_msg)
 
 def main():
     argument_spec = ansible.module_utils.ec2.ec2_argument_spec()
@@ -595,6 +615,13 @@ def main():
         stack_params['RoleARN'] = module.params['role_arn']
 
     result = {}
+
+    # validate tags
+    if state == 'present':
+        if module.params.get('tags'):
+            tag_validation(module.params.get('tags'), module)
+        else:
+            module.fail_json(msg="Invalid Tag: global tags are not defined.")
 
     try:
         region, ec2_url, aws_connect_kwargs = ansible.module_utils.ec2.get_aws_connection_info(module, boto3=True)
